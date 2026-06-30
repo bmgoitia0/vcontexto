@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caso Plus Ultra | Demo de módulo de contexto</title>
+  <style>
+    @font-face {
+      font-family: "Tiempos Headline";
+      src: url("https://ggcstatic.lavanguardia.com/assets/fonts/TiemposHeadline-Medium.woff2") format("woff2");
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root {
+      color-scheme: light dark;
+      --page-bg: #ffffff;
+      --surface: #eaf1f6;
+      --surface-border: #e3e8ee;
+      --surface-strong: #dbe3ea;
+      --text: #171a1c;
+      --muted: #5a6772;
+      --subtle: #cfd6dc;
+      --accent: #38566b;
+      --headline-font: "Source Serif 4", Georgia, "Times New Roman", serif;
+      --accent-soft: #c6d6e2;
+      --hairline: #d9e0e6;
+      --placeholder: #d8dde3;
+      --max-width: 1180px;
+      --radius: 12px;
+      --gap: 24px;
+      --shadow: 0 0 0 rgba(0, 0, 0, 0);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --page-bg: #101214;
+        --surface: #171c20;
+        --surface-border: #2a333a;
+        --surface-strong: #38454f;
+        --text: #eef2f5;
+        --muted: #afbbc5;
+        --accent: #94afc2;
+        --accent-soft: #22303a;
+        --hairline: #2b343b;
+        --placeholder: #2d353b;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scrollbar-gutter: stable;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: var(--page-bg);
+      line-height: 1.55;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    a:focus-visible,
+    button:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--accent) 50%, white 50%);
+      outline-offset: 3px;
+    }
+
+    .page {
+      width: min(calc(100% - 32px), var(--max-width));
+      margin: 0 auto;
+      padding: 24px 0 64px;
+    }
+
+    /* Rejilla editorial principal: 3 columnas iguales y un gap constante */
+    .news-layout {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--gap);
+      align-items: start;
+    }
+
+    .story-header {
+      padding-top: 18px;
+      border-top: 1px solid var(--subtle);
+    }
+
+    .full-span {
+      grid-column: 1 / -1;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      font-size: clamp(0.82rem, 0.98vw, 1.05rem);
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-family: var(--headline-font);
+      line-height: 1.1;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: "Tiempos Headline", var(--headline-font);
+      font-size: clamp(1.95rem, 3.1vw, 2.8rem);
+      line-height: 44px;
+      font-weight: 500;
+      letter-spacing: -0.022em;
+    }
+
+    .standfirst {
+      margin: 0;
+      padding: 18px 0 14px;
+      font-family: var(--headline-font);
+      font-size: clamp(1.12rem, 1.55vw, 1.35rem);
+      line-height: 1.16;
+      color: #6b7177;
+      border-top: 1px solid var(--subtle);
+      border-bottom: 1px solid var(--subtle);
+    }
+
+    .standfirst::before {
+      content: "•";
+      display: inline-block;
+      margin-right: 10px;
+      color: var(--accent);
+      font-size: 1.05em;
+    }
+
+    .hero {
+      margin: 0;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--surface-border);
+      background: var(--placeholder);
+      aspect-ratio: 16 / 8;
+    }
+
+    .hero svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .hero img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .byline {
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .hero figcaption {
+      padding: 12px 0 0;
+      font-size: 0.84rem;
+      color: #6f767c;
+      border-bottom: 1px solid var(--subtle);
+      margin-top: 0;
+      padding-bottom: 14px;
+    }
+
+    .story {
+      grid-column: 1 / 3;
+      min-width: 0;
+    }
+
+    .story p {
+      margin: 0 0 1.25rem;
+      font-size: 1.06rem;
+    }
+
+    .story p:first-of-type {
+      font-size: 1.12rem;
+    }
+
+    .sidebar {
+      min-width: 0;
+      padding-top: 4px;
+    }
+
+    .sidebar-card {
+      border-top: 3px solid var(--text);
+      padding-top: 14px;
+    }
+
+    .sidebar h2 {
+      margin: 0 0 18px;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .most-read-item {
+      display: grid;
+      grid-template-columns: 88px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 0 0 16px;
+      margin: 0 0 16px;
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    .most-read-item a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .most-read-item a:hover p,
+    .most-read-item a:focus-visible p {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .most-read-thumb {
+      width: 88px;
+      height: 66px;
+      overflow: hidden;
+      background: var(--placeholder);
+    }
+
+    .most-read-thumb img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .most-read-item p {
+      margin: 0;
+      font-size: 0.96rem;
+      line-height: 1.4;
+    }
+
+    /* Módulo de contexto: tarjeta integrada como primer bloque del cuerpo */
+    .context-module {
+      margin: 0 0 28px;
+      padding: 18px;
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .context-toggle {
+      width: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .context-head {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin: 0;
+    }
+
+    .context-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .context-date {
+      font-size: 0.92rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .context-head-right {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .context-chevron {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--surface-border);
+      border-radius: 999px;
+      color: var(--accent);
+      font-size: 0.95rem;
+      line-height: 1;
+      transition: transform 180ms ease;
+    }
+
+    .context-module.is-collapsed .context-chevron {
+      transform: rotate(-180deg);
+    }
+
+    .context-content {
+      margin-top: 12px;
+      overflow: hidden;
+      max-height: 1200px;
+      opacity: 1;
+      transition: max-height 280ms ease, opacity 220ms ease;
+    }
+
+    .context-module.is-collapsed .context-content {
+      max-height: 0;
+      opacity: 0;
+      margin-top: 0;
+    }
+
+    .context-summary {
+      margin: 0 0 14px;
+      font-size: 1rem;
+      color: var(--text);
+    }
+
+    .context-points {
+      margin: 0;
+      padding-left: 1.1rem;
+    }
+
+    .context-points li {
+      margin-bottom: 0.75rem;
+      color: var(--text);
+    }
+
+    .context-divider {
+      height: 1px;
+      margin: 16px 0;
+      background: var(--hairline);
+      border: 0;
+    }
+
+    .timeline-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .timeline-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-left: auto;
+    }
+
+    .timeline-title {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .timeline-hint {
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .timeline-shell {
+      position: relative;
+    }
+
+    .timeline-shell::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 48px;
+      height: 100%;
+      pointer-events: none;
+      background: linear-gradient(to right, rgba(0, 0, 0, 0), var(--surface));
+      opacity: 1;
+      transition: opacity 180ms ease;
+    }
+
+    .timeline-shell[data-end="true"]::after {
+      opacity: 0;
+    }
+
+    .timeline-controls {
+      display: none;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .timeline-button {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--surface-border);
+      border-radius: 999px;
+      background: var(--page-bg);
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    .timeline-button[disabled] {
+      opacity: 0.45;
+      cursor: default;
+    }
+
+    .timeline-scroll {
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      cursor: grab;
+      scroll-snap-type: x proximity;
+    }
+
+    .timeline-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Timeline horizontal con línea base y nodos clicables completos */
+    .timeline {
+      position: relative;
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(148px, 1fr);
+      gap: 16px;
+      list-style: none;
+      margin: 0;
+      padding: 10px 4px 4px;
+      min-width: max-content;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 24px;
+      right: 24px;
+      top: 26px;
+      height: 2px;
+      background: var(--surface-strong);
+      z-index: 0;
+    }
+
+    .timeline-item {
+      position: relative;
+      z-index: 1;
+      scroll-snap-align: start;
+    }
+
+    .timeline-link {
+      display: block;
+      min-height: 118px;
+      padding: 0 12px 12px 0;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .timeline-dot {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      margin-bottom: 10px;
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      background: var(--surface);
+    }
+
+    .timeline-item.is-current .timeline-dot {
+      background: var(--accent);
+      box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--accent) 50%, white 50%);
+    }
+
+    .timeline-date {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.84rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .timeline-label {
+      display: block;
+      font-size: 0.97rem;
+      font-weight: 700;
+      line-height: 1.35;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .timeline-link:hover .timeline-label,
+    .timeline-link:focus-visible .timeline-label {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    @media (min-width: 1024px) {
+      .timeline-controls {
+        display: flex;
+      }
+
+      .timeline-hint {
+        display: none;
+      }
+    }
+
+    @media (max-width: 1023px) {
+      .page {
+        width: min(calc(100% - 24px), 920px);
+        padding-top: 24px;
+      }
+
+      .news-layout {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .full-span {
+        grid-column: 1 / -1;
+      }
+
+      .story {
+        grid-column: 1 / -1;
+      }
+
+      .sidebar {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 767px) {
+      .page {
+        width: min(calc(100% - 20px), 680px);
+        padding-bottom: 40px;
+      }
+
+      .news-layout {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+
+      .story,
+      .sidebar,
+      .full-span {
+        grid-column: 1 / -1;
+      }
+
+      .context-module {
+        margin-bottom: 24px;
+        padding: 16px;
+      }
+
+      .context-head {
+        align-items: flex-start;
+      }
+
+      .standfirst {
+        max-width: 100%;
+      }
+
+      .timeline {
+        grid-auto-columns: minmax(180px, 1fr);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        scroll-behavior: auto !important;
+      }
+
+      .timeline-shell::after {
+        transition: none;
+      }
+
+      .context-chevron {
+        transition: none;
+      }
+
+      .context-content {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <article class="news-layout" aria-labelledby="main-headline">
+      <header class="full-span story-header">
+        <p class="eyebrow">Caso Plus Ultra</p>
+        <h1 id="main-headline">Zapatero pide la nulidad de la causa y acusa a Anticorrupción de hacer “investigaciones paralelas”</h1>
+      </header>
+
+      <p class="standfirst full-span">Además del contenido de los teléfonos de Rodolfo Reyes y de Miguel Palomero, la defensa del expresidente del Gobierno reclama que se anulen las resoluciones judiciales que originaron la causa</p>
+
+      <figure class="hero full-span" aria-label="Imagen principal de la noticia">
+        <img src="imagen_ppal.webp" alt="Imagen principal de la información sobre el caso Plus Ultra">
+        <figcaption>José Luis Rodríguez Zapatero, en una imagen de archivo vinculada a la cobertura del caso Plus Ultra.</figcaption>
+      </figure>
+
+      <div class="byline full-span">Por Redacción · Madrid — actualizado 29 jun 2026</div>
+
+      <section class="story" aria-label="Cuerpo de la noticia">
+        <aside class="context-module" aria-label="Contexto del tema">
+          <button class="context-toggle" type="button" aria-expanded="true" aria-controls="context-content">
+            <div class="context-head">
+              <span class="context-pill">Contexto · PONTE AL DÍA</span>
+              <span class="context-head-right">
+                <span class="context-date">Actualizado 29 jun 2026</span>
+                <span class="context-chevron" aria-hidden="true">⌃</span>
+              </span>
+            </div>
+          </button>
+
+          <div class="context-content" id="context-content">
+            <p class="context-summary">La Audiencia Nacional investiga a José Luis Rodríguez Zapatero en el «caso Plus Ultra»: una presunta trama de tráfico de influencias y blanqueo en torno al rescate público de 53 millones de euros a la aerolínea en 2021. El expresidente niega los hechos.</p>
+
+            <ul class="context-points">
+              <li>Imputado por organización criminal, tráfico de influencias y falsedad documental; no se descarta el blanqueo.</li>
+              <li>La UDEF halló joyas por valor de 1,3 millones de euros en una caja fuerte en el despacho del expresidente.</li>
+              <li>Sus hijas y su secretaria han sido citadas como investigadas.</li>
+            </ul>
+
+            <hr class="context-divider">
+
+            <div class="timeline-header">
+              <p class="timeline-title">Cronología de la causa</p>
+              <div class="timeline-header-actions">
+                <span class="timeline-hint">Desliza ›</span>
+                <div class="timeline-controls" aria-hidden="true">
+                  <button class="timeline-button" type="button" data-direction="prev" aria-label="Desplazar cronología hacia la izquierda">‹</button>
+                  <button class="timeline-button" type="button" data-direction="next" aria-label="Desplazar cronología hacia la derecha">›</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="timeline-shell" data-end="false">
+              <div class="timeline-scroll" data-timeline-scroll>
+                <ol class="timeline">
+                  <li class="timeline-item">
+                    <a class="timeline-link" href="https://www.lavanguardia.com/politica/20260531/11551795/como-llego-zapatero.html" target="_blank" rel="noopener">
+                      <span class="timeline-dot" aria-hidden="true"></span>
+                      <time class="timeline-date" datetime="2024-10">Oct 2024</time>
+                      <span class="timeline-label">Primeros indicios</span>
+                    </a>
+                  </li>
+                  <li class="timeline-item">
+                    <a class="timeline-link" href="https://www.lavanguardia.com/politica/20251216/11366125/udef-rastrea-nexo-plus-ultra-familia-zapatero.html" target="_blank" rel="noopener">
+                      <span class="timeline-dot" aria-hidden="true"></span>
+                      <time class="timeline-date" datetime="2025-12">Dic 2025</time>
+                      <span class="timeline-label">Detención de Julio Martínez</span>
+                    </a>
+                  </li>
+                  <li class="timeline-item is-current">
+                    <a class="timeline-link" href="https://www.lavanguardia.com/politica/20260520/11542577/juez-situa-zapatero-frente-red-trafico-influencias.html" target="_blank" rel="noopener">
+                      <span class="timeline-dot" aria-hidden="true"></span>
+                      <time class="timeline-date" datetime="2026-05-19">19 May 2026</time>
+                      <span class="timeline-label">Imputación de Zapatero</span>
+                    </a>
+                  </li>
+                  <li class="timeline-item">
+                    <a class="timeline-link" href="https://www.lavanguardia.com/politica/20260617/11567270/zapatero-me-acusa-graves-delitos-he-cometido.html" target="_blank" rel="noopener">
+                      <span class="timeline-dot" aria-hidden="true"></span>
+                      <time class="timeline-date" datetime="2026-06-17">17 Jun 2026</time>
+                      <span class="timeline-label">Declaración ante el juez</span>
+                    </a>
+                  </li>
+                  <li class="timeline-item">
+                    <a class="timeline-link" href="https://www.lavanguardia.com/politica/20260618/11568265/juez-caso-plus-ultra-acuerda-investigar-hijas-rodriguez-zapatero.html" target="_blank" rel="noopener">
+                      <span class="timeline-dot" aria-hidden="true"></span>
+                      <time class="timeline-date" datetime="2026-06-18">18 Jun 2026</time>
+                      <span class="timeline-label">Imputadas hijas y secretaria</span>
+                    </a>
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <p>La defensa del expresidente del Gobierno José Luis Rodríguez Zapatero sigue presentando escritos en busca de la nulidad de la causa, conocida como caso Plus Ultra, contra él. Ya ha puesto en entredicho el contenido del teléfono de uno de los investigados, Rodolfo Reyes, aportado por las autoridades estadounidenses, y el de las conversaciones de un abogado, Miguel Palomero, procedente de una investigación por blanqueo francesa. Asimismo, pide la nulidad de otra lista de documentos y acusa a la Fiscalía Anticorrupción de llevar “investigaciones paralelas”.</p>
+        <p>En un escrito, al que ha tenido acceso La Vanguardia, la defensa de Zapatero sostiene que es el juez de instrucción quien debe llevar las riendas de la investigación y no la Fiscalía ni la Policía. “No son admisibles las investigaciones paralelas, ni el solapamiento de quienes intervienen en la persecución penal, ni las actuaciones que vayan en contra de asumir sin reservas el papel y la autoridad del juez de instrucción como director único de la investigación penal, lo que somete al resto de quienes intervienen en el procedimiento a las decisiones del instructor”, recoge en su escrito.</p>
+        <p>Concretamente, la defensa pide la nulidad general de las actuaciones y en particular de doce resoluciones judiciales ante una vulneración del “derecho al juez ordinario predeterminado por la ley, a un proceso justo con todas las garantías, el derecho a la tutela judicial efectiva sin indefensión y el derecho a la presunción de inocencia”.</p>
+        <p>Para empezar, su abogado, Víctor Moreno Catena, considera que el origen de la causa está viciado porque nunca se debió tramitar en el juzgado de Madrid que en su día archivó el procedimiento por el rescate de Plus Ultra sino que se debía haber presentado una denuncia independiente.</p>
+      </section>
+
+      <aside class="sidebar" aria-label="Lo más leído">
+        <div class="sidebar-card">
+          <h2>Lo más leído</h2>
+
+          <article class="most-read-item">
+            <div class="most-read-thumb" aria-hidden="true">
+              <img src="https://www.lavanguardia.com/files/image_449_220/files/fp/uploads/2025/01/22/67911338ea9d9.r_d.3978-2199-748.jpeg" alt="">
+            </div>
+            <a href="https://www.lavanguardia.com/internacional/20260629/11578449/cinco-muertos-tiroteo-ciudad-alemana-stade.html" target="_blank" rel="noopener">
+              <p>Al menos cinco muertos en un tiroteo en la ciudad alemana de Stade</p>
+            </a>
+          </article>
+
+          <article class="most-read-item">
+            <div class="most-read-thumb" aria-hidden="true">
+              <img src="https://www.lavanguardia.com/files/image_449_220/files/fp/uploads/2019/01/02/5fa517454850d.r_d.466-449-4526.jpeg" alt="">
+            </div>
+            <a href="https://www.lavanguardia.com/economia/20260629/11578333/gobierno-desbloquea-jubilacion-parcial-empleados-publicos.html" target="_blank" rel="noopener">
+              <p>El Gobierno desbloquea la jubilación parcial de los empleados públicos</p>
+            </a>
+          </article>
+
+          <article class="most-read-item">
+            <div class="most-read-thumb" aria-hidden="true">
+              <img src="https://www.lavanguardia.com/files/image_449_220/files/fp/uploads/2026/06/28/6a418f9da0389.r_d.1203-636-2145.jpeg" alt="">
+            </div>
+            <a href="https://www.lavanguardia.com/deportes/futbol/mundial-2026/20260628/11577728/resumen-sudafrica-canada-eustaquio.html" target="_blank" rel="noopener">
+              <p>Canadá solo puede con Sudáfrica en el añadido</p>
+            </a>
+          </article>
+        </div>
+      </aside>
+    </article>
+  </main>
+
+  <script>
+    (() => {
+      const contextModule = document.querySelector(".context-module");
+      const contextToggle = document.querySelector(".context-toggle");
+      const contextContent = document.querySelector(".context-content");
+      const shell = document.querySelector(".timeline-shell");
+      const scroller = document.querySelector("[data-timeline-scroll]");
+      const prevButton = document.querySelector('[data-direction="prev"]');
+      const nextButton = document.querySelector('[data-direction="next"]');
+
+      if (!contextModule || !contextToggle || !contextContent || !shell || !scroller || !prevButton || !nextButton) {
+        return;
+      }
+
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      let isMouseDown = false;
+      let hasDragged = false;
+      let dragJustHappened = false;
+      let startX = 0;
+      let startScrollLeft = 0;
+
+      const syncContextHeight = () => {
+        if (contextModule.classList.contains("is-collapsed")) {
+          contextContent.style.maxHeight = "0px";
+          return;
+        }
+
+        contextContent.style.maxHeight = `${contextContent.scrollHeight}px`;
+      };
+
+      const updateControls = () => {
+        const maxScroll = scroller.scrollWidth - scroller.clientWidth;
+        const current = Math.round(scroller.scrollLeft);
+        prevButton.disabled = current <= 0;
+        nextButton.disabled = current >= Math.max(0, maxScroll - 1);
+        shell.dataset.end = current >= Math.max(0, maxScroll - 1) ? "true" : "false";
+      };
+
+      const scrollByAmount = (direction) => {
+        const amount = Math.min(scroller.clientWidth * 0.8, 320);
+        scroller.scrollBy({
+          left: direction === "next" ? amount : -amount,
+          behavior: prefersReducedMotion ? "auto" : "smooth"
+        });
+      };
+
+      prevButton.addEventListener("click", () => scrollByAmount("prev"));
+      nextButton.addEventListener("click", () => scrollByAmount("next"));
+
+      contextToggle.addEventListener("click", () => {
+        const isExpanded = contextToggle.getAttribute("aria-expanded") === "true";
+        contextToggle.setAttribute("aria-expanded", String(!isExpanded));
+        if (isExpanded) {
+          contextContent.style.maxHeight = `${contextContent.scrollHeight}px`;
+          requestAnimationFrame(() => {
+            contextModule.classList.add("is-collapsed");
+            contextContent.style.maxHeight = "0px";
+          });
+          return;
+        }
+
+        contextModule.classList.remove("is-collapsed");
+        contextContent.hidden = false;
+        contextContent.style.maxHeight = "0px";
+
+        requestAnimationFrame(() => {
+          syncContextHeight();
+          updateControls();
+        });
+      });
+
+      scroller.addEventListener("scroll", updateControls, { passive: true });
+      window.addEventListener("resize", () => {
+        syncContextHeight();
+        updateControls();
+      });
+
+      contextContent.addEventListener("transitionend", (event) => {
+        if (event.propertyName !== "max-height") {
+          return;
+        }
+
+        if (contextModule.classList.contains("is-collapsed")) {
+          contextContent.hidden = true;
+          return;
+        }
+
+        syncContextHeight();
+      });
+
+      scroller.addEventListener("mousedown", (event) => {
+        if (event.button !== 0) {
+          return;
+        }
+
+        isMouseDown = true;
+        hasDragged = false;
+        dragJustHappened = false;
+        startX = event.clientX;
+        startScrollLeft = scroller.scrollLeft;
+        scroller.style.cursor = "grab";
+      });
+
+      scroller.addEventListener("mousemove", (event) => {
+        if (!isMouseDown) {
+          return;
+        }
+
+        const delta = event.clientX - startX;
+        if (!hasDragged && Math.abs(delta) > 6) {
+          hasDragged = true;
+          dragJustHappened = true;
+          scroller.style.cursor = "grabbing";
+        }
+
+        if (!hasDragged) {
+          return;
+        }
+
+        event.preventDefault();
+        scroller.scrollLeft = startScrollLeft - delta;
+      });
+
+      const releaseMouse = () => {
+        if (!isMouseDown) {
+          return;
+        }
+
+        isMouseDown = false;
+        scroller.style.cursor = "grab";
+      };
+
+      scroller.addEventListener("mouseup", releaseMouse);
+      scroller.addEventListener("mouseleave", releaseMouse);
+      window.addEventListener("mouseup", releaseMouse);
+
+      scroller.addEventListener("click", (event) => {
+        if (dragJustHappened) {
+          event.preventDefault();
+          event.stopPropagation();
+          dragJustHappened = false;
+        }
+      }, true);
+
+      updateControls();
+      contextContent.hidden = false;
+      syncContextHeight();
+    })();
+  </script>
+</body>
+</html>
